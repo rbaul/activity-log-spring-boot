@@ -1,0 +1,35 @@
+buildscript {
+    ext {
+        springBootVersion = '2.1.2.RELEASE'
+    }
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath 'com.bmuschko:gradle-nexus-plugin:2.3.1'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+apply plugin: 'com.bmuschko.nexus'
+apply from: '../gradle/nexus_config.gradle'
+
+sourceCompatibility = '1.8'
+
+repositories {
+    mavenCentral()
+}
+
+bootJar { enabled = false }
+jar {enabled = true}
+
+dependencies {
+    implementation('org.springframework.boot:spring-boot-starter')
+    compile(project(':activity-log-spring-boot'))
+}
+
+compileJava.dependsOn(processResources)
