@@ -1,5 +1,5 @@
 # Activity Log Spring Boot (Starter)
-[Spring Boot](https://spring.io/projects/spring-boot) Starter for `JWT Security`.
+[Spring Boot](https://spring.io/projects/spring-boot) Starter for `Activity Log`.
 > Activity Log easy way
 > Create you owen receiver for activity log
 
@@ -125,7 +125,7 @@ public class ActivityLogReceiverInfoImpl implements ActivityLogReceiver {
     }
 ```
 
-####### Run Sample
+##### Run Sample
 > Run ActivityLogSampleApplication
 
 ```log
