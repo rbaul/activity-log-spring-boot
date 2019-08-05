@@ -32,7 +32,7 @@ public class ExampleServiceImpl {
             "{{exampleObject." + ExampleObject.Fields.field4 + "}} and " +
             "{{exampleObject." + ExampleObject.Fields.field5 + "}} throw exception")
     public void method3(ExampleObject exampleObject) {
-        throw new RuntimeException("Oooopppppsss");
+        throw new RuntimeException("method3: Oooopppppsss");
     }
 
     @ActivityLog(value = "Action on method4: with {{str1}}", onPre = true)
@@ -40,7 +40,7 @@ public class ExampleServiceImpl {
         log.info("method4({})", str1);
     }
 
-    @ActivityLog("Action on method2: with " +
+    @ActivityLog("Action on method5: with " +
             "{{exampleObject." + ExampleObject.Fields.field1 + "}} and " +
             "Inner object: {{exampleObject." + ExampleObject.Fields.innerExampleObject + "." + InnerExampleObject.Fields.innerField1 + "}} and " +
             "{{exampleObject." + ExampleObject.Fields.innerExampleObject + "." + InnerExampleObject.Fields.innerField2 + "}}")
