@@ -36,6 +36,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class ActivityLogAspect {
 
+    private static final String ANONYMOUS_USERNAME = "anonymous";
     private final List<ActivityLogReceiver> activityLogReceivers;
 
     /**
@@ -109,7 +110,7 @@ public class ActivityLogAspect {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || !(authentication.getPrincipal() instanceof UserDetails)) {
-            return null;
+            return ANONYMOUS_USERNAME;
         }
 
         return ((UserDetails) authentication.getPrincipal()).getUsername();
