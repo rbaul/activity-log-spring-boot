@@ -27,5 +27,15 @@ public class ActivityLogRunner implements ApplicationRunner {
         }
         exampleService.method4("argument1");
         exampleService.method5(new ExampleObject());
+
+        exampleService.method6("argument1");
+
+        exampleService.method7("argument1");
+
+        exampleService.method8("argument1");
+
+        exampleService.method9("argument1");
+
+        exampleService.method10(new ExampleObject());
     }
 }

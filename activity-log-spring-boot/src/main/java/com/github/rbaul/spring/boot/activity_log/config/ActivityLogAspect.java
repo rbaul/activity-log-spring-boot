@@ -11,11 +11,13 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.CodeSignature;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Field;
@@ -38,6 +40,7 @@ public class ActivityLogAspect {
 
     private static final String ANONYMOUS_USERNAME = "anonymous";
     private final List<ActivityLogReceiver> activityLogReceivers;
+    private final ApplicationContext applicationContext;
 
     /**
      * Pointcut of parameters with {@link ActivityLog}
@@ -144,12 +147,37 @@ public class ActivityLogAspect {
     private Map<String, Object> getArgumentsValue(Set<String> messageArgumentNames, ProceedingJoinPoint joinPoint) {
         Map<String, Object> parametersValue = new HashMap<>();
         if (!CollectionUtils.isEmpty(messageArgumentNames)) {
+            messageArgumentNames.forEach(parameter -> {
+                String parameterWithoutPrefixAndPostfix = parameter.substring(2).replace("}}", "");
+                if (parameterWithoutPrefixAndPostfix.startsWith("@")) {
+                    parametersValue.put(parameter, getBeanMethodResponse(joinPoint, parameterWithoutPrefixAndPostfix));
+                } else if (parameterWithoutPrefixAndPostfix.startsWith("#")) {
+                    parametersValue.put(parameter, getInnerMethodResponse(joinPoint, parameterWithoutPrefixAndPostfix));
+                } else if (parameter.startsWith("$")) {
+                    parametersValue.put(parameter, getResponseValue(joinPoint, parameterWithoutPrefixAndPostfix));
+                } else {
+                    parametersValue.put(parameter, getArgumentValues(new HashSet<>(Collections.singletonList(parameterWithoutPrefixAndPostfix)), joinPoint).get(parameterWithoutPrefixAndPostfix));
+                }
+            });
+        }
+        return parametersValue;
+    }
+
+    /**
+     * Get relevant parameters values
+     *
+     * @param messageArgumentNames arguments name from message
+     * @param joinPoint            ProceedingJoinPoint
+     * @return map of argument values
+     */
+    private Map<String, Object> getArgumentValues(Set<String> messageArgumentNames, ProceedingJoinPoint joinPoint) {
+        Map<String, Object> parametersValue = new HashMap<>();
+        if (!CollectionUtils.isEmpty(messageArgumentNames)) {
             List<String> paramNames = Arrays.asList(((CodeSignature) joinPoint.getSignature()).getParameterNames());
             Object[] paramValues = joinPoint.getArgs();
 
             messageArgumentNames.forEach(parameter -> {
-                String parameterWithoutPrefixAndPostfix = parameter.substring(2).replace("}}", "");
-                List<String> split = Arrays.asList(parameterWithoutPrefixAndPostfix.split("\\."));
+                List<String> split = Arrays.asList(parameter.split("\\."));
                 Optional<String> stringOptional = split.stream().findFirst();
                 if (stringOptional.isPresent()) {
                     String parmName = stringOptional.get();
@@ -200,5 +228,75 @@ public class ActivityLogAspect {
             activityLogReceivers.forEach(activityLogReceiver ->
                     activityLogReceiver.receive(activityLogObject));
         }
+    }
+
+    /**
+     * Get string from
+     *
+     * @param beanMethod - example @beanName.methodName(arguments)
+     * @return
+     */
+    private String getBeanMethodResponse(ProceedingJoinPoint joinPoint, String beanMethod) {
+        if (beanMethod.startsWith("@")) {
+            int firstDotIndex = beanMethod.indexOf(".");
+            String beanName = beanMethod.substring(1, firstDotIndex);
+            Object bean = applicationContext.getBean(beanName);
+
+            String methodSignature = beanMethod.substring(firstDotIndex + 1);
+            return getMethodResponse(joinPoint, bean, methodSignature);
+        }
+        return null;
+    }
+
+    /**
+     * Get string from method
+     *
+     * @param method - example #methodName(arguments)
+     * @return
+     */
+    private String getInnerMethodResponse(ProceedingJoinPoint joinPoint, String method) {
+        if (method.contains("#")) {
+            Object target = joinPoint.getTarget();
+            return getMethodResponse(joinPoint, target, method.substring(1));
+        }
+        return null;
+    }
+
+    /**
+     * Get Method response
+     *
+     * @return
+     */
+    private String getMethodResponse(ProceedingJoinPoint joinPoint, Object target, String methodSignature) {
+        String methodName = methodSignature.substring(0, methodSignature.indexOf("("));
+        String argumentsString = methodSignature.substring(methodSignature.indexOf("(") + 1, methodSignature.indexOf(")"));
+        Map<String, Object> argumentsValue;
+        String[] argumentNames;
+        if (argumentsString.isEmpty()) {
+            argumentsValue = new HashMap<>();
+            argumentNames = new String[]{};
+        } else {
+            argumentNames = argumentsString.split(",");
+            Set<String> args = new HashSet<>(Arrays.asList(argumentNames));
+            argumentsValue = getArgumentValues(args, joinPoint);
+        }
+
+        Object[] arguments = Arrays.stream(argumentNames).map(argumentsValue::get).toArray(Object[]::new);
+        Optional<Method> methodToExecute = Arrays.stream(target.getClass().getMethods())
+                .filter(method -> Objects.equals(method.getName(), methodName) && method.getParameterCount() == argumentsValue.size()).findFirst();
+
+        if (methodToExecute.isPresent()) {
+            Object result = ReflectionUtils.invokeMethod(methodToExecute.get(), target, arguments);
+            return result.toString();
+        }
+        return null;
+    }
+
+    private Object getResponseValue(ProceedingJoinPoint joinPoint, String responseValue) {
+        if (responseValue.contains("$")) {
+            Object target = joinPoint.getTarget();
+            return getMethodResponse(joinPoint, target, responseValue.substring(1));
+        }
+        return null;
     }
 }

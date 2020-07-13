@@ -47,4 +47,38 @@ public class ExampleServiceImpl {
     public void method5(ExampleObject exampleObject) {
         log.info("method5({})", exampleObject);
     }
+
+
+    @ActivityLog("Action on method6: with {{#responseMethod(str1)}}")
+    public void method6(String str1) {
+        log.info("method6({})", str1);
+    }
+
+    @ActivityLog("Action on method9: with {{#responseMethod()}}")
+    public void method9(String str1) {
+        log.info("method9({})", str1);
+    }
+
+    @ActivityLog("Action on method7: with {{@exampleServiceImpl.responseMethod()}}")
+    public void method7(String str1) {
+        log.info("method7({})", str1);
+    }
+
+    @ActivityLog("Action on method8: with {{@exampleServiceImpl.responseMethod(str1)}}")
+    public void method8(String str1) {
+        log.info("method8({})", str1);
+    }
+
+    @ActivityLog("Action on method10: with {{@exampleServiceImpl.responseMethod(exampleObject." + ExampleObject.Fields.field1 + ")}}")
+    public void method10(ExampleObject exampleObject) {
+        log.info("method10({})", exampleObject);
+    }
+
+    public String responseMethod() {
+        return "Response empty";
+    }
+
+    public String responseMethod(String str1) {
+        return "Response " + str1;
+    }
 }
